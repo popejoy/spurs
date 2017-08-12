@@ -1,2 +1,2 @@
 # SPurS Project: Identifying Shifts in Purifying Selection
-
+The SPurS tool is designed to identify shifts in purifying selection between groups of species. Sites in the genome under strong <a href=”https://www.nature.com/scitable/topicpage/negative-selection-1136”> purifying selection </a> are highly conserved (invariant) across all species. In contrast, SPurS sites exhibit conservation among species belonging to the same group or phylogenetic clade, and variation between species in different groups or clades.
