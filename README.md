@@ -1,2 +1,2 @@
-# spurs
-SPurS detects shifts in purifying selection
+# SPurS Project: Identifying Shifts in Purifying Selection
+
