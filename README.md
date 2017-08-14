@@ -6,10 +6,9 @@ For example, a site with one amino acid in mammals and a different amino acid in
 <p align="center">
   <img src="https://user-images.githubusercontent.com/6342355/29278014-c89e3266-8113-11e7-8da3-c8412a20359b.jpg" border="5"/>
 </p>
-
 My program to detect these shifts across different groups of species, *SPurS* is designed to elucidate proteins that are enriched for changes that segregate between taxonomic groups. Sites driving these changes are likely involved in speciation, or divergence between species, and are thus highly informative from a functional evolution perspective.
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/6342355/29278014-c89e3266-8113-11e7-8da3-c8412a20359b.jpg" width="600"/>
+  <img src="https://user-images.githubusercontent.com/6342355/29278013-c8766952-8113-11e7-9f67-0c728ec9d973.jpg" width="650"/>
 </p>
 
