@@ -6,7 +6,9 @@ For example, a site with one amino acid in mammals and a different amino acid in
 <p align="center">
   <img src="https://user-images.githubusercontent.com/6342355/29278014-c89e3266-8113-11e7-8da3-c8412a20359b.jpg" border="5"/>
 </p>
-My program to detect these shifts across different groups of species, *SPurS* is designed to elucidate proteins that are enriched for changes that segregate between taxonomic groups. Sites driving these changes are likely involved in speciation, or divergence between species, and are thus highly informative from a functional evolution perspective.
+The SPurS program calculates a Psi-value (Fig.1) for each site in a protein alignment, and the results can be visualized in SPurS plots (Fig.2, below) by using the [Genomic Hyperbrowser SPurS tool](https://hyperbrowser.uio.no/spurs).
+
+When compared to a matched simulated dataset, these results can be compared to determine whether proteins are enriched for SPurS sites. These sites are likely involved in speciation, or divergence between species, and are thus highly informative for evolutionary genomics.
 
 <p align="center">
   <img src="https://user-images.githubusercontent.com/6342355/29278013-c8766952-8113-11e7-9f67-0c728ec9d973.jpg" width="650"/>
