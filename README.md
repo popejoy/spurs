@@ -1,2 +1,2 @@
 # SPurS Project: Identifying Shifts in Purifying Selection
-Sites in the genome under strong purifying selection(https://www.nature.com/scitable/topicpage/negative-selection-1136) are highly conserved (invariant) across all species. In contrast, SPurS sites exhibit conservation among species belonging to the same group or phylogenetic clade, and variation between species in different groups or clades.
+Sites in the genome under strong [purifying selection](https://www.nature.com/scitable/topicpage/negative-selection-1136) are highly conserved (invariant) across all species. In contrast, SPurS sites exhibit conservation among species belonging to the same group or phylogenetic clade, and variation between species in different groups or clades.
