@@ -1,0 +1,555 @@
+#######################################################################################
+# SPurS: Shifts in Purifying Selection
+# Identifying Sites of Divergence-linked Shifts in Purifying Selection
+# Written by: Alice B. Popejoy, Institute for Public Health Genetics, University of Washington
+# Version: July 2017, modified for use on the Genome Hyperbrowser at the University of Oslo
+#######################################################################################
+# Acknowledgements: James H. Thomas, University of Washington (advisor)
+#######################################################################################
+#####		PURPOSE		###############################################################
+#######################################################################################
+##### SPuRs will take an alignment of protein sequences and a control file to compare 
+##### divergence at each site between and within specified clades to identify sites 
+##### where there is purifying selection within both clades, but divergence between them. 
+#####
+##### These sites of Shifts in Purifying Selection (SPurS) are identified by psi-values 
+##### approaching or equal to one, where Popejoy's "Psi" is the difference of the
+##### frequencies of diverged sites between and within phylogenetic clades.
+#####
+##### Popejoy's (per-site) Psi = pi(between) - pi(within) 
+##### 	where pi(between) = # differences observed between clades / # comparisons btwn.
+#####	and pi(within) = # differences observed within clades / # comparisons within
+#######################################################################################
+
+#######################################################################################
+#####		INSTRUCTIONS FOR USE		###############################################
+#######################################################################################
+
+#######################################################################################
+#####		INPUT FILES		###########################################################
+#######################################################################################
+##### 1. Protein alignment (.phylip format)
+#####
+##### 2. Control file (See documentation for template; format below)
+#####
+##### 	 First line: Clade_name_1 <tab> Clade_name_2 <tab> Clade_name_3 <tab> etc.
+#####	 2nd line: Species_A <tab> Value_for_Clade_1 (0 or 1) <tab> Value_Clade_2 etc.
+#####	 3rd line: Species_B <tab> Value_for_Clade_1 (0 or 1) <tab> Value_Clade_2 etc.
+#####	 Etc...
+#####
+#####	NOTE: All species listed in the control file will be analysed; does not need
+#####		to include species from the alignment that investigator wishes to ignore.
+#####		- Divergence test will weed out any paralogous or poorly predicted seqs.
+#####		- SPurS will only compare species from two clades specified by arguments.
+#######################################################################################
+#####		OUTPUT FILES		#######################################################
+#######################################################################################
+##### Out file (results) will write to the current working directory under the name:
+##### "SPurS_Clade_1_Clade_2.out" where Clade_1 and Clade_2 are specified by Args 4 & 5
+#######################################################################################
+#####		REQUIRED ARGUMENTS		###################################################
+#######################################################################################
+##### 0. python
+##### 1. SPurS (path to this program)
+##### 2. --AlignFile [Path to Phylip_alignment]
+##### 3. --ControlFile [Path to Control_file]
+##### 4. --C1 [Name of first species clade to compare (case-sensitive)]
+#####			NOTE: Must match one of the clades in the control file
+##### 5. --C2 [Name of second species clade to compare (case-sensitive)]
+#####			NOTE: Must match one of the clades in the control file
+#####
+##### E.g. Command line input: "python /user/SPurS_program.py --AlignFile alignment.txt 
+#####							--ControlFile control.txt --C1 Mammal --C2 Sauropsid"
+#######################################################################################
+#####		OPTIONS		###############################################################
+#######################################################################################
+##### --Exclude "File_name" (file containing names of sequences desired to be 
+#####								excluded fromSPurS analysis)
+##### --Require "species1 species 2" (string of taxa that are required at every site in
+####									order to conduct SPurS analysis)
+##### --Minimum "3" (specifies the minimum number of sequences from each clade that must
+#####					be present in order to conduct SPurS analysis; Default = 3)
+##### --Ignore "X" (tells SPurS to ignore only residues with "X" in any position in the
+#####				 alignment; Default = "-", "X", "N")
+##### --PsiBin "Y" (specifies the desired psi-value bin for additional information about 
+#### 				sites with psi-value equal to given "Y"; Default = 1.0)
+
+from optparse import OptionParser
+
+SPurS_parser = OptionParser("Usage: SPurS [options] \n")
+SPurS_parser.add_option("--AlignFile", "-i", "--infile", type="string", dest="alignment", default=None)
+SPurS_parser.add_option("--ControlFile", type="string", dest="control", default=None)
+SPurS_parser.add_option("--C1", type="string", dest="clade_1", default=None)
+SPurS_parser.add_option("--C2", type="string", dest="clade_2", default=None)
+SPurS_parser.add_option("--outputPath", type="string", dest="outputPath", default='./')
+SPurS_parser.add_option("--PsiBin", type="float", dest="psi_bin", default="1", help="Specify the psi-value bin (greater than or equal to given number) for each site.")
+SPurS_parser.add_option("--MakeHist", type="string", dest="hist", default="N", help="Indicate whether you want to view a histogram of the gene under investigation. Not recommended for analysis of multiple genes.")
+SPurS_parser.add_option("--Exclude", type="string", dest="exclude", default="", help="Provide names of sequences (species/taxa) in the input alignment to be excluded from SPurS analysis; separate multiple taxa by a comma, e.g. Chimpanzee,Flying_fox.")
+SPurS_parser.add_option("--Minimum", type="int", dest="Min_Taxa", default=3, help="Specify minimum number of sequences that must be included from each clade before SPurS is calculated.")
+SPurS_parser.add_option("--Ignore", type="string", dest="Res_Ignore", default="-,X", help="Specify residues to ignore across whole alignment for SPurS calculation; separated by commas. Default is '-' and 'X'.")
+SPurS_parser.add_option("--Require", type="string", dest="Req_Taxa", default="hsap", help="Specify taxa to require in order to compute psi values; multiple taxa should be separated by a comma with no space, e.g. Human,Platypus.")
+
+(options, args) = SPurS_parser.parse_args()
+
+# VARIABLES TO USE:
+# options.alignment
+# options.control
+# options.clade_1
+# options.clade_2
+# options.outputPath
+# options.psi_bin
+# options.hist
+# options.exclude
+# options.Min_Taxa
+# options.Res_Ignore
+# options.Req_Taxa
+#######################################################################################
+#######################################################################################
+# Print Header #
+print()
+print("   *   *   *   ")
+print()
+print("Running SPurS: Shifts in Purifying Selection")
+print("Identifying Sites of Divergence-linked Shifts in Purifying Selection")
+print("Copyright 2017 Alice B. Popejoy")
+print()
+print("   *   *   *   ")
+#######################################################################################
+#####		CLASS DEFINITIONS		###################################################
+#######################################################################################
+
+class taxon_define:
+	def __init__(self, taxon, sequence, clade):
+		self.species = taxon
+		self.sequence = sequence
+		if clade == 1:
+			self.c1_value = 1
+			self.c2_value = 0
+		elif clade == 2:
+			self.c1_value = 0
+			self.c2_value = 1
+
+class site_info_b:
+	def __init__(self, position, psi):
+		self.site = position
+		self.psi_value = psi
+		
+#######################################################################################
+
+#######################################################################################
+#####		FUNCTIONS		###########################################################
+#######################################################################################
+
+# Test whether the alignment file is in the correct format (.phylip files start with two numbers in the header) #
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+        
+# Read in the Control file and return a dictionary of taxon (species) names with their clade ID #
+def read_control(f, excluded, required, clade_minimum):
+	open_control = open(f, 'r')
+	clade_list = open_control.readline().strip().split("\t")	# Create a list of the clades included in the control file #
+		
+	i = 1
+	for clade in clade_list:									# Records which clade each species is in (number in a list of clades, starting with 1)#
+		if clade == options.clade_1:
+			c1_indicator = i
+			i += 1
+		elif clade == options.clade_2:
+			c2_indicator = i
+			i += 1
+		else:
+			i += 1
+	
+	taxa_clade_vectors = open_control.readlines()				# Read in each line of 0's and 1's indicating clade membership for each species #
+	open_control.close()
+	
+	clade_dictionary = {}										# Make a dictionary indicating which clade a species is in #
+	
+	clade_1_check = 0
+	clade_2_check = 0
+	
+	for taxon in taxa_clade_vectors:
+		taxon_parse = taxon.strip()
+		taxon_parse_pieces = taxon_parse.split('\t')
+		taxon_name = taxon_parse_pieces[0]
+		taxon_clade_1_value = taxon_parse_pieces[c1_indicator]
+		taxon_clade_2_value = taxon_parse_pieces[c2_indicator]
+		
+		if taxon_name not in excluded:
+			if taxon_clade_1_value == "1":
+				clade_dictionary[taxon_name] = 1
+				clade_1_check += 1
+			elif taxon_clade_2_value == "1":
+				clade_dictionary[taxon_name] = 2
+				clade_2_check += 1
+	
+	if clade_1_check < clade_minimum:
+		print("*** ERROR: Clade 1 does not have the specified minimum number of species. Please include more taxa in Clade 1 or modify the settings. ***")
+		print("*** SPurS requires at least 3 taxa for each clade by default. You can change this by including the option --Minimum and specifying the minimum number of sequences required for each clade. ***")
+		sys.exit()
+	if clade_2_check < clade_minimum:
+		print("*** ERROR: Clade 2 does not have the specified minimum number of species. Please include more taxa in Clade 2 or modify the settings. ***")
+		print("*** SPurS requires at least 3 taxa for each clade by default. You can change this by including the option --Minimum and specifying the minimum number of sequences required for each clade. ***")
+		sys.exit()
+		
+	for required_taxon in required:
+		if required_taxon not in clade_dictionary:
+			print()
+			print("*** ERROR: Must include required taxa (species) in the control file: " , required_taxon, "***")
+			print()
+			sys.exit()
+		else: continue
+		
+	return clade_dictionary
+
+def percent_ignore(sequence, ignore_items):
+	ignore_sites = 0
+	for s in sequence:
+		if s in ignore_items:
+			ignore_sites += 1
+	percent_ignore_sites = float(ignore_sites) / float(len(sequence))
+	return percent_ignore_sites
+
+# Read in a Phylip alignment #
+def read_phylip(file, control_file, dict_exclude, max_missing, list_require, list_ignore):
+	open_align = open(file, 'r')
+	header_line = open_align.readline().strip()
+	header = header_line.split('\t')
+	if len(header) == 1:
+		header = header[0].split(' ')
+	num_seqs = int(header[0])
+	len_align = int(header[1])
+	
+	if is_number(header[0]) == True:						# Make sure alignment file is in correct format
+		print()
+		print("Number of sequences in raw alignment = " + str(num_seqs))
+		print("Total length of raw alignment = " + str(len_align))
+		print
+		print("Clade 1: " + options.clade_1)
+		print("Clade 2: " + options.clade_2)
+		print()
+	elif is_number(header[0]) == False:						# Close and quit if wrong input file type
+		open_align.close()
+		print
+		print("*** ERROR: Alignment file must be in .phylip format! ***")
+		print
+		print("*** TROUBLESHOOT: Check alignment file type -- header should contain two numbers: # of sequences and length of the alignment ***")
+		print
+		sys.exit(1)
+	
+	sequences = open_align.readlines()
+	open_align.close()
+
+	clade_dict = read_control(control_file, dict_exclude, list_require, options.Min_Taxa)		# Read the control file and return a dictionary of the species and their clade values #
+	
+	print("Species in Clades 1 and 2 found in control file: " + str(len(clade_dict)))
+	#for species in clade_dict.keys():
+	#	clade_number = str(clade_dict[species])
+	#	print (species + " (Clade "+ clade_number + ")")								# Print the species found in each clade from the control file #
+	
+	Sequence_list = []													# Record sequence data from control dictionary; includes species in one of the two specified clades #
+	required_check = 0
+	
+	clade_1_check = 0
+	clade_2_check = 0
+	
+	no_duplicates = {}
+	duplicate_taxa = []
+	number_duplicates = 0
+	
+	for s in sequences:
+		s = s.strip()
+		s_items = re.split(r"\s+", s)
+		taxon_name = s_items[0]
+		taxon_sequence = s_items[1]
+		
+		if taxon_name in clade_dict:
+			if taxon_name in Require_list:								# Make sure sequences for the required taxa are included #
+				required_check += 1
+			taxon_clade = clade_dict[taxon_name]
+			if taxon_clade == 1:										# Keep track of how many sequences are in each clade #
+				clade_1_check += 1
+			elif taxon_clade == 2:
+				clade_2_check += 1
+			
+			if taxon_name in no_duplicates:								# MAKE SURE THERE ARE NO DUPLICATE TAXA #
+				number_duplicates += 1
+				if taxon_name not in duplicate_taxa:
+					duplicate_taxa.append(taxon_name)
+				current_seq = no_duplicates[taxon_name][0]
+				#print(current_seq)
+				#print(taxon_sequence)
+				current_percent_ignore = percent_ignore(current_seq, list_ignore)
+				dup_percent_ignore = percent_ignore(taxon_sequence, list_ignore)
+				if current_percent_ignore > dup_percent_ignore:
+					no_duplicates[taxon_name] = taxon_sequence, taxon_clade
+			else:
+				no_duplicates[taxon_name] = taxon_sequence, taxon_clade
+	for tentative_taxon in no_duplicates:
+		taxon_tuple = no_duplicates[tentative_taxon]
+		seq = taxon_define(tentative_taxon, taxon_tuple[0], taxon_tuple[1])
+		# print(seq.species + " " + seq.sequence)
+		Sequence_list.append(seq)	
+		
+	if number_duplicates > 0:
+		print("> NOTE: Duplicate taxa found in your multiple alignment.")
+		print(">> Duplicate taxa:", str(duplicate_taxa))
+		print(">> The sequence(s) for this/these taxon with the smallest percentage of gaps has been selected for SPurS anlaysis."+'\n')
+
+	if required_check != len(Require_list):
+		print("*** ERROR: Must provide sequences for all required taxa (species). ***")
+		print("*** Please check the alignment file for missing sequences or change --Require settings. ***")
+		sys.exit()
+	
+	if clade_1_check < max_missing:
+		print("*** ERROR: Clade 1 does not have the specified minimum number of species. Please include more taxa in Clade 1 or modify the settings. ***")
+		print("*** SPurS requires at least 3 taxa for each clade by default. You can change this by including the option --Minimum and specifying the minimum number of sequences required for each clade. ***")
+		sys.exit()
+	if clade_2_check < max_missing:
+		print("*** ERROR: Clade 2 does not have the specified minimum number of species. Please include more taxa in Clade 2 or modify the settings. ***")
+		print("*** SPurS requires at least 3 taxa for each clade by default. You can change this by including the option --Minimum and specifying the minimum number of sequences required for each clade. ***")
+		sys.exit()
+
+	print("Number of species in current analysis (", options.clade_1, " vs. ", options.clade_2, "): " + str(len(Sequence_list)))
+	if len(Sequence_list) < len(clade_dict):
+		taxa_diff = len(clade_dict) - len(Sequence_list)
+		print("*** NOTE: The number of taxa recruited from the control file is larger than the number of species in the analysis. ***")
+		print("*** It is recommended to check the sequence alignment for missing taxa if this was unintentional. ***")
+		print()
+
+	return Sequence_list, len_align						# Returns a list of class objects (taxon) with four items: self.species, self.sequence, self.c1_value and self.c2_value #
+	
+# Calculate Psi-value for a single site #
+def calc_psi(pi_w, pi_b, comp_w, comp_b):
+	psi_w = float(pi_w)/float(comp_w)
+	psi_b = float(pi_b)/float(comp_b)
+	psi = psi_b - psi_w
+
+	return psi
+
+# Iterate over all taxa in the alignment once and calculate within-clade and between-clade differences for a per-site psi calculation.
+def iterate(taxon_object_list, site, ignore_residues, required_species, dict_exclude, missing_max):
+	# Make empty dictionaries for each clade to be compared #
+	
+	clade1_dict = {}
+	clade2_dict = {}
+	
+	pi_between = 0
+	pi_within = 0
+	comp_between = 0
+	comp_within = 0
+	residues_skipped = 0
+	
+	c1_dict_res = 0							# Keep track of the number of residues considered from each clade #
+	c2_dict_res = 0
+	
+	c1_vals = []
+	c2_vals = []
+	
+	for i in range(len(taxon_object_list)):					# for each taxon in the list of sequence objects #
+		taxon_i = taxon_object_list[i]
+		i_site = taxon_i.sequence[site]						# identifies the residue at this site in the sequence #
+		i_species = taxon_i.species
+		
+		if i_site in ignore_residues:
+			if i_species in required_species:
+				return "NA","NA","NA","NA"
+				break
+			else:
+				residues_skipped += 1
+				continue
+			
+		elif i_site not in ignore_residues:
+			
+			c1_i = int(taxon_i.c1_value)					# Determine which clade the taxon is in #
+			c2_i = int(taxon_i.c2_value)
+			
+			if c1_i == 1:
+				c1_dict_res += 1
+				if i_site not in clade1_dict:				# Add residues to dictionaries for each clade #
+					clade1_dict[i_site] = 1
+				else:
+					clade1_dict[i_site] = clade1_dict[i_site] + 1
+			elif c2_i == 1:
+				c2_dict_res += 1
+				if i_site not in clade2_dict:
+					clade2_dict[i_site] = 1	
+				else:
+					clade2_dict[i_site] = clade2_dict[i_site] + 1
+	
+	if c1_dict_res < int(missing_max):								# Check to make sure there are a minimum number of residues analyzed from each clade #
+		return "NA","NA","NA","NA"
+		exit()
+	if c2_dict_res < int(missing_max):
+		return "NA","NA","NA","NA"
+		exit()
+		
+	# Calculate the number of comparisons between and within clades #
+	comp_between = c1_dict_res * c2_dict_res
+	n_c1 = c1_dict_res - 1
+	n_c2 = c2_dict_res - 1
+	comp_within = ((n_c1 * c1_dict_res) / 2) + ((n_c2 * c2_dict_res) / 2)
+			
+	# Calculate pi (divergence counts) between and within clades #
+	for resA in clade1_dict.keys():									# for each residue in clade 1
+		for resB in clade2_dict.keys():								# for each residue in clade 2
+			if resA != resB:										# if the residues in different clades are different
+				pi_between += clade1_dict[resA] * clade2_dict[resB] 	# multiply the numbers from each clade
+		
+	if len(clade1_dict.keys()) == 1 and len(clade2_dict.keys()) == 1:		# If there is only one entry in each dictionary, pi_within = 0 #
+		pi_within = 0
+	else:
+		for val in clade1_dict.values():
+			c1_vals.append(val)
+		for val in clade2_dict.values():
+			c2_vals.append(val)
+		
+		if len(c1_vals) == 1:
+			c1_within = 0
+		else:
+			for i in range(len(c1_vals)):
+				for j in range(i+1, len(c1_vals)):
+					c1_within = float(c1_vals[i]) * float(c1_vals[j])
+		pi_within += c1_within
+			
+		if len(c2_vals) == 1:
+			c2_within = 0
+		else:
+			for y in range(len(c2_vals)):
+				for z in range(y+1, len(c2_vals)):
+					c2_within = float(c2_vals[y]) * float(c2_vals[z])
+		pi_within += c2_within
+
+	return (pi_within, comp_within, pi_between, comp_between)
+
+#######################################################################################
+
+#######################################################################################
+#####		MAIN		###############################################################
+#######################################################################################
+##### The SPurS algorithm computes a Psi-value for each site in the alignment that has 
+##### sufficient information (defined by the number maximum missing sequences allowed  
+##### and the number of gaps present in the data).
+#######################################################################################
+import sys
+import os
+import math
+#import scipy
+#import numpy
+#import numpy as np
+#import pylab as pl
+import re
+
+Ignore_list = []
+residues2ignore = options.Res_Ignore
+ignore_residues = residues2ignore.split(',')
+for res in ignore_residues:
+	Ignore_list.append(res)
+
+Require_list = []
+species_require = options.Req_Taxa
+req_taxa = species_require.split(',')
+for taxon in req_taxa:
+	Require_list.append(taxon)
+
+Exclude_dict = {}
+species_exclude = options.exclude
+exclude_taxa = species_exclude.split(',')
+for taxon in exclude_taxa:
+	Exclude_dict[taxon] = None
+
+# Read in and process the files -- produce a list of class objects for each sequence #
+phylip_file_objects, len_align = read_phylip(options.alignment, options.control, Exclude_dict, options.Min_Taxa, Require_list, Ignore_list)
+
+# Make a list of the species included in this particular alignment file #
+species_names_list = []
+for sp in phylip_file_objects:
+	species_names_list.append(sp.species)
+
+# Go through each site (column) in the alignment and calculate SPurS #
+missing_sites = 0
+psi_vals_all = []
+psi_vals_1 = []
+
+for s in range(len_align):
+	
+	pi_within, comp_within, pi_between, comp_between = iterate(phylip_file_objects, s, Ignore_list, Require_list, Exclude_dict, options.Min_Taxa)
+
+	if pi_within == "NA":
+		missing_sites += 1
+		site_object = site_info_b(s, "NA")
+		psi_vals_all.append(site_object)
+		continue
+		
+	else:
+		psi_val = calc_psi(pi_within, pi_between, comp_within, comp_between)	
+		site_object = site_info_b(s, psi_val)
+		psi_vals_all.append(site_object)
+		
+		if psi_val == 1:
+			psi_vals_1.append(site_object)
+		
+total_sites = int(len_align) - int(missing_sites)
+num_psi_1 = len(psi_vals_1)
+percent_psi_1 = float(num_psi_1) / float(total_sites)
+psi_bin = str(options.psi_bin)
+
+print("Total number of sites analyzed: " + str(total_sites))
+print
+print("Number of sites with Psi = 1.0 : " + str(num_psi_1))
+print("Percentage of sites analyzed with Psi = 1.0 :" + str(percent_psi_1))
+print()
+print()
+#######################################################################################
+
+#######################################################################################
+#####	BUILD OUTFILES		###########################################################
+#######################################################################################
+
+alignment_info_file = open("alignment_info.out", 'w')
+alignment_info_file.write(str(total_sites) + '\t' + str(species_names_list))
+alignment_info_file.close()
+
+spurs_file = open(options.outputPath + "SPurS_" + options.clade_1 +"-" + options.clade_2 + ".out", 'w')
+spurs_file.write("       *     *     *"+'\n'+"SPurS: Identifying Shifts in Purifying Selection" + '\n' + "       *     *     *"+'\n')
+spurs_file.write("Comparison between " + options.clade_1 + " and " + options.clade_2 + " clades" + '\n')
+spurs_file.write("Number of sites analyzed in current analysis: " + str(total_sites) + '\n')
+spurs_file.write("Number of species analyzed in current analysis: " + str(len(species_names_list))+'\n')
+spurs_file.write("Species: " + str(species_names_list)+'\n')
+spurs_file.write("       *     *     *"+'\n')
+psi_list = []
+NA_count = 0.0
+for psi in psi_vals_all:
+	psi_list.append(psi.psi_value)
+	if psi.psi_value == 'NA':
+		NA_count += 1.0
+spurs_file.write("Vector of psi-values for full alignment: " + str(psi_list)+'\n')
+spurs_file.write("       *     *     *"+'\n')
+spurs_file.write("NOTE: Sites with psi-values = 'NA' indicate those with too little information to evaluate."+'\n') 
+Skipped = float(NA_count/len_align)
+spurs_file.write("In this analysis, " + str(1-Skipped) + "% of sites were evaluated."+'\n')
+if Skipped > .5:
+	spurs_file.write("Because less than half of the alignment was evaluated, we recommend you interpret these results with caution."+'\n')
+spurs_file.write("       *     *     *"+'\n'+'\n')
+spurs_file.write("Number of sites with Psi = 1.0 : " + str(num_psi_1) + '\n')
+spurs_file.write("Proportion of sites analyzed with Psi = 1.0 : " + str(percent_psi_1) + '\n')
+psi_1_list = []
+for p in psi_vals_1:
+	psi_1_list.append(p.site)
+spurs_file.write("Vector of sites with Psi-values = 1.0 : " + str(psi_1_list) + '\n')
+spurs_file.write("       *     *     *"+'\n')
+spurs_file.close()
+
+psi_file = open("psi-values.out", 'w')
+psi_file.write(str(psi_list))
+psi_file.close()
+
+print("Outfiles written to working directory with .out suffix. The file 'psi-values.out' contains a single vector of psi-values for the full alignment.")
+print("Questions? Email Alice B. Popejoy at popejoy@uw.edu.")
+print()
+print("   *   *   *   ")
+print()
