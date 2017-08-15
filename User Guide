@@ -1,0 +1,75 @@
+#######################################################################################
+# SPurS: Shifts in Purifying Selection
+# Identifying Sites of Divergence-linked Shifts in Purifying Selection
+# Written by: Alice B. Popejoy, Institute for Public Health Genetics, University of Washington
+# Version: July 2017, modified for use on the Genome Hyperbrowser at the University of Oslo
+#######################################################################################
+# Acknowledgements: James H. Thomas, University of Washington (advisor)
+#######################################################################################
+#####		PURPOSE		###############################################################
+#######################################################################################
+##### SPuRs will take an alignment of protein sequences and a control file to compare 
+##### divergence at each site between and within specified clades to identify sites 
+##### where there is purifying selection within both clades, but divergence between them. 
+#####
+##### These sites of Shifts in Purifying Selection (SPurS) are identified by psi-values 
+##### approaching or equal to one, where Popejoy's "Psi" is the difference of the
+##### frequencies of diverged sites between and within phylogenetic clades.
+#####
+##### Popejoy's (per-site) Psi = pi(between) - pi(within) 
+##### 	where pi(between) = # differences observed between clades / # comparisons btwn.
+#####	and pi(within) = # differences observed within clades / # comparisons within
+#######################################################################################
+
+#######################################################################################
+#####		INSTRUCTIONS FOR USE		###############################################
+#######################################################################################
+
+#######################################################################################
+#####		INPUT FILES		###########################################################
+#######################################################################################
+##### 1. Protein alignment (.phylip format)
+#####
+##### 2. Control file (See documentation for template; format below)
+#####
+##### 	 First line: Clade_name_1 <tab> Clade_name_2 <tab> Clade_name_3 <tab> etc.
+#####	 2nd line: Species_A <tab> Value_for_Clade_1 (0 or 1) <tab> Value_Clade_2 etc.
+#####	 3rd line: Species_B <tab> Value_for_Clade_1 (0 or 1) <tab> Value_Clade_2 etc.
+#####	 Etc...
+#####
+#####	NOTE: All species listed in the control file will be analysed; does not need
+#####		to include species from the alignment that investigator wishes to ignore.
+#####		- Divergence test will weed out any paralogous or poorly predicted seqs.
+#####		- SPurS will only compare species from two clades specified by arguments.
+#######################################################################################
+#####		OUTPUT FILES		#######################################################
+#######################################################################################
+##### Out file (results) will write to the current working directory under the name:
+##### "SPurS_Clade_1_Clade_2.out" where Clade_1 and Clade_2 are specified by Args 4 & 5
+#######################################################################################
+#####		REQUIRED ARGUMENTS		###################################################
+#######################################################################################
+##### 0. python
+##### 1. SPurS (path to this program)
+##### 2. --AlignFile [Path to Phylip_alignment]
+##### 3. --ControlFile [Path to Control_file]
+##### 4. --C1 [Name of first species clade to compare (case-sensitive)]
+#####			NOTE: Must match one of the clades in the control file
+##### 5. --C2 [Name of second species clade to compare (case-sensitive)]
+#####			NOTE: Must match one of the clades in the control file
+#####
+##### E.g. Command line input: "python /user/SPurS_program.py --AlignFile alignment.txt 
+#####							--ControlFile control.txt --C1 Mammal --C2 Sauropsid"
+#######################################################################################
+#####		OPTIONS		###############################################################
+#######################################################################################
+##### --Exclude "File_name" (file containing names of sequences desired to be 
+#####								excluded fromSPurS analysis)
+##### --Require "species1 species 2" (string of taxa that are required at every site in
+####									order to conduct SPurS analysis)
+##### --Minimum "3" (specifies the minimum number of sequences from each clade that must
+#####					be present in order to conduct SPurS analysis; Default = 3)
+##### --Ignore "X" (tells SPurS to ignore only residues with "X" in any position in the
+#####				 alignment; Default = "-", "X", "N")
+##### --PsiBin "Y" (specifies the desired psi-value bin for additional information about 
+#### 				sites with psi-value equal to given "Y"; Default = 1.0)
