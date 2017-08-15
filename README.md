@@ -10,7 +10,7 @@ For example, a site with one amino acid in mammals and a different amino acid in
 The SPurS program calculates a Psi-value (Fig.1) for each site in a protein alignment, and the results can be visualized in SPurS plots (Fig.2, below) by using the [Genomic Hyperbrowser SPurS tool](https://hyperbrowser.uio.no/spurs). When compared to a matched simulated dataset, these results can be compared to determine whether proteins are enriched for SPurS sites. These sites are likely involved in speciation, or divergence between species, and are thus highly informative for evolutionary genomics.
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/6342355/29311676-2ec705d2-81b3-11e7-9637-432f79815855.jpg" "width=800"/>
+  <img src="https://user-images.githubusercontent.com/6342355/29311905-974b711a-81b3-11e7-8e30-79c53a810b6c.jpg" "width=800"/>
 </p>
 
 Fig.5 (above) shows SPurS plots for multiple-sequence alignments of FAM81A and SLC1A3 across 76 species, with Psi-values calculated between mammals and birds.
